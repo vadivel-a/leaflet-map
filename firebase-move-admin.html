@@ -76,7 +76,7 @@
         let markers = {};
 
         // Initialize the map
-        const map = L.map('map').setView([11.1271, 78.6569], 8);  // Default view centered on India
+        const map = L.map('map').setView([11.1271, 78.6569], 6);  // Default view centered on India
         const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
@@ -170,7 +170,7 @@
             // Extend bounds to include this marker's location
             if (renderAddress) {
                 //bounds.extend([lat, lng]);
-                map.fitBounds(bounds);
+                //map.fitBounds(bounds);
             }     
         }
 
@@ -197,7 +197,7 @@
             },
             {
                 enableHighAccuracy: true,
-                timeout: 200000,
+                timeout: 20000,
                 maximumAge: 0
             }
         );

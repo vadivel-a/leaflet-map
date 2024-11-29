@@ -96,6 +96,51 @@
             }
         }
 
+        // Function to update a message
+        function updateMessage(messageId, newText) {
+            const messageRef = ref(db, `messages/${systemId}/${messageId}`);
+            set(messageRef, {
+                text: newText,
+                timestamp: Date.now()
+            }).then(() => {
+                console.log("Message updated!");
+            }).catch((error) => {
+                console.error("Error updating message:", error);
+            });
+        }
+
+        // Edit message functionality
+        function editMessage(messageId) {
+            const messageRef = ref(db, `messages/${systemId}/${messageId}`);
+            get(messageRef).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const currentMessage = snapshot.val();
+                    const newText = prompt("Edit the message:", currentMessage.text);
+                    if (newText && newText !== currentMessage.text) {
+                        updateMessage(messageId, newText); // Update the message in Firebase
+                    }
+                } else {
+                    console.log("Message not found");
+                }
+            });
+        }
+
+                // Adding button click functionality for adding new messages (optional)
+        document.getElementById("updateButton").addEventListener("click", () => {
+            const newMessage = prompt("Enter a new message:");
+            if (newMessage) {
+                const newMessageRef = ref(db, 'messages/'+systemId+'/message' + Date.now());
+                set(newMessageRef, {
+                    text: newMessage,
+                    timestamp: Date.now()
+                }).then(() => {
+                    console.log("New message added!");
+                }).catch((error) => {
+                    console.error("Error adding message:", error);
+                });
+            }
+        });
+
         // Map initialization
         const map = L.map('map').setView([11.1271, 78.6569], 6);
         const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

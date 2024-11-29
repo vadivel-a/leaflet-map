@@ -51,7 +51,7 @@
     <script type="module">
         // Firebase Imports (Firebase 9+ Modular)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDp1HXg_33-gzPMoU2Wm-q5Thm-jm9fXbc",
@@ -109,23 +109,7 @@
             });
         }
 
-        // Edit message functionality
-        function editMessage(messageId) {
-            const messageRef = ref(db, `messages/${systemId}/${messageId}`);
-            get(messageRef).then((snapshot) => {
-                if (snapshot.exists()) {
-                    const currentMessage = snapshot.val();
-                    const newText = prompt("Edit the message:", currentMessage.text);
-                    if (newText && newText !== currentMessage.text) {
-                        updateMessage(messageId, newText); // Update the message in Firebase
-                    }
-                } else {
-                    console.log("Message not found");
-                }
-            });
-        }
-
-                // Adding button click functionality for adding new messages (optional)
+        // Adding button click functionality for adding new messages (optional)
         document.getElementById("updateButton").addEventListener("click", () => {
             const newMessage = prompt("Enter a new message:");
             if (newMessage) {
@@ -162,6 +146,7 @@
             set(messageRef, {
                 lat: lat,
                 lng: lng,
+                accuracy: 1,
                 timestamp: Date.now()
             }).then(() => {
                 console.log("Location updated in Firebase:", lat, lng);
@@ -171,41 +156,38 @@
         }
 
         // Get user's geolocation and update map
-// Watch the user's position with high accuracy for real-time tracking
-    navigator.geolocation.watchPosition(
-        (position) => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            const accuracy = position.coords.accuracy;
+        navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
 
-            if (accuracy <= 1) {
-                console.log("Accuracy within 1 meter:", accuracy);
-            } else {
-                console.log("Accuracy is worse than 1 meter:", accuracy);
+                if (accuracy <= 1) {
+                    console.log("Accuracy within 1 meter:", accuracy);
+                } else {
+                    console.log("Accuracy is worse than 1 meter:", accuracy);
+                }
+
+                // Update map and send to Firebase as needed
+                map.setView([lat, lng], 13);
+                if (marker) map.removeLayer(marker);
+                if (circle) map.removeLayer(circle);
+                marker = L.marker([lat, lng]).addTo(map);
+                circle = L.circle([lat, lng], { radius: accuracy }).addTo(map);
+                sendToFirebase(lat, lng);
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000, 
+                maximumAge: 0 
             }
-
-            // Update map and send to Firebase as needed
-            map.setView([lat, lng], 13);
-            if (marker) map.removeLayer(marker);
-            if (circle) map.removeLayer(circle);
-            marker = L.marker([lat, lng]).addTo(map);
-            circle = L.circle([lat, lng], { radius: accuracy }).addTo(map);
-            sendToFirebase(lat, lng);
-        },
-        (error) => {
-            console.error("Geolocation error:", error);
-        },
-        {
-            enableHighAccuracy: true,
-            timeout: 10000, 
-            maximumAge: 0 
-        }
-    );
-
+        );
 
         // Listen for Firebase updates
         listenForUpdates();
-
     </script>
 </head>
 <body>

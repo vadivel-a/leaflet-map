@@ -175,7 +175,7 @@
         }
 
         // Watch the user's position with high accuracy for real-time tracking
-        navigator.geolocation.watchPosition(
+        navigator.geolocation(
             (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;

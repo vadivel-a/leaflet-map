@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Firebase</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            width: 600px;
+            height: 400px;
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuid.min.js"></script>
+    <script>
+        // Function to get or generate a unique ID
+        function getSystemId() {
+            let systemId = localStorage.getItem('systemId');
+            if (!systemId) {
+                systemId = uuid.v4();  // Generate a unique UUID
+                localStorage.setItem('systemId', systemId);  // Store it in localStorage
+            }
+            return systemId;
+        }
+
+        // When the document is loaded, update the system ID
+        document.addEventListener('DOMContentLoaded', function() {
+            const systemId = getSystemId();  // Get or generate the system ID
+            const uuidElement = document.getElementById('uuid');
+
+            if (uuidElement) {
+                uuidElement.textContent = `Your Unique System ID (UUID): ${systemId}`;
+            } else {
+                console.error("Element with ID 'uuid' not found.");
+            }
+        });
+    </script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <script type="module">
+        // Firebase Imports (Firebase 9+ Modular)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDp1HXg_33-gzPMoU2Wm-q5Thm-jm9fXbc",
+            authDomain: "fir-75b6e.firebaseapp.com",
+            projectId: "fir-75b6e",
+            storageBucket: "fir-75b6e.firebasestorage.app",
+            messagingSenderId: "4430792579",
+            appId: "1:4430792579:web:8b3f541e4c3afe62b418b6",
+            measurementId: "G-7RCW9F2QFX"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const systemId = localStorage.getItem('systemId');
+        const locationsRef = ref(db, 'locations');
+        const messagesRef = ref(db, 'messages');
+
+        const userMessageList = [];
+
+        // Store markers for multiple users
+        let markers = {};
+
+        // Initialize the map
+        const map = L.map('map').setView([11.1271, 78.6569], 8);  // Default view centered on India
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Function to send updated location to Firebase
+        function sendToFirebase(lat, lng) {
+            const messageRef = ref(db, `locations/${systemId}`);
+            set(messageRef, {
+                lat: lat,
+                lng: lng,
+                accuracy: 1,  // Example accuracy value (could come from geolocation)
+                timestamp: Date.now()
+            }).then(() => {
+                console.log("Location updated in Firebase:", lat, lng);
+            }).catch((error) => {
+                console.error("Error updating location:", error);
+            });
+        }
+
+        // Listen for location updates from Firebase
+        function listenForLocationUpdates() {
+            onValue(messagesRef, (snapshot) => {
+                const messages = snapshot.val();
+                if (messages) {
+                    
+                    for (let userId in messages) {
+                        const messageRows = messages[userId];
+                        for (let messageId in messageRows) {
+                            userMessageList[userId] = messageRows[messageId]['text'];
+                        }
+                        //userMessageList[userId] = messages[userId][0][userId]['text'];
+                    }
+                } else {
+                    console.log("No messages available");
+                }
+            });
+            
+            onValue(locationsRef, (snapshot) => {
+                const locations = snapshot.val();
+                if (locations) {
+                    const bounds = L.latLngBounds(); // Initialize bounds for zooming
+                    for (let userId in locations) {
+                        const location = locations[userId];
+                        
+                        updateMarker(userId, location.lat, location.lng, location.accuracy, bounds);
+                    }
+                    // Fit the map to the bounds of all markers
+                    //map.fitBounds(bounds);
+                } else {
+                    console.log("No locations available");
+                }
+            });
+        }
+
+ 
+ 
+        function getAddress(lat, lng) {
+            return fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        return data.display_name;
+                    } else {
+                        console.log('Address not found!');
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching address:", error);
+            });
+        }
+
+        // Update or create a marker for a user
+        async function updateMarker(userId, lat, lng, accuracy, bounds) {
+            let renderAddress = await getAddress(lat, lng);
+            console.log(renderAddress);
+            var userDetail = '';
+            if (userMessageList[userId]) {
+                userDetail = userMessageList[userId];
+            }
+            
+            if (markers[userId]) {
+                // Update the existing marker
+                markers[userId].setLatLng([lat, lng]);
+                markers[userId].getPopup().setContent(`User: ${userDetail} <br> Accuracy: ${accuracy} meters,<br>Address: ${renderAddress}`);
+            } else {
+                // Create a new marker
+                const newMarker = L.marker([lat, lng]).addTo(map);
+                newMarker.bindPopup(`User ID: ${userDetail} <br> Accuracy: ${accuracy} meters, <br>Address: ${renderAddress}`);
+                markers[userId] = newMarker;
+            }
+            // Extend bounds to include this marker's location
+            if (renderAddress) {
+                bounds.extend([lat, lng]);
+                map.fitBounds(bounds);
+            }     
+        }
+
+        // Watch the user's position with high accuracy for real-time tracking
+        navigator.geolocation.watchPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
+
+                console.log("User location:", lat, lng, "Accuracy:", accuracy);
+
+                // Send the current position to Firebase
+                sendToFirebase(lat, lng);
+
+                // Update the user's own marker on the map
+                const bounds = L.latLngBounds();
+                updateMarker(systemId, lat, lng, accuracy, bounds);
+
+                // Fit the map to the bounds of all markers (including the user's own position)
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 200000,
+                maximumAge: 0
+            }
+        );
+
+        // Listen for Firebase updates (location and messages)
+        listenForLocationUpdates();
+    </script>
+</head>
+<body>
+    <h1>Firebase Demo</h1>
+    <pre id="uuid"></pre>
+    <button id="updateButton">Add New Message</button>
+    <div id="messages"></div>
+    <div id="map"></div>
+</body>
+</html>

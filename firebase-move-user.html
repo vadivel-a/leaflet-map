@@ -111,7 +111,7 @@
 
         // Adding button click functionality for adding new messages (optional)
         document.getElementById("updateButton").addEventListener("click", () => {
-            const newMessage = prompt("Enter a new message:");
+            const newMessage = prompt("Enter your name:");
             if (newMessage) {
                 const newMessageRef = ref(db, 'messages/'+systemId+'/message' + Date.now());
                 set(newMessageRef, {

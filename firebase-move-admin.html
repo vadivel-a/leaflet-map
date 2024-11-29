@@ -87,7 +87,7 @@
             set(messageRef, {
                 lat: lat,
                 lng: lng,
-                accuracy: 1,  // Example accuracy value (could come from geolocation)
+                accuracy: 10,  // Example accuracy value (could come from geolocation)
                 timestamp: Date.now()
             }).then(() => {
                 console.log("Location updated in Firebase:", lat, lng);
@@ -198,7 +198,7 @@
             {
                 enableHighAccuracy: true,
                 timeout: 20000,
-                maximumAge: 0
+                maximumAge: 1
             }
         );
 
